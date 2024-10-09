@@ -30,22 +30,22 @@ model = AutoModel.from_pretrained(checkpoint)
 model.to(device)
 model.eval()
 
-mut = pickleLoad('../../aa/canonical_mut.pkl')
+ref = pickleLoad('../../aa/canonical_ref.pkl')
 
-mut_seqs = []
+ref_seqs = []
 
-for seq in mut: 
+for seq in ref: 
     if seq is None: 
-        mut_seqs.append('')
+        ref_seqs.append('')
         continue
     seq = seq.split('*')[0]
-    mut_seqs.append(seq)
+    ref_seqs.append(seq)
 
-mut_embeddings = np.empty((len(mut),640),dtype=np.float32)
+ref_embeddings = np.empty((len(ref),640),dtype=np.float32)
 print('getting embeddings')
 load_val = lambda x: torch.tensor([x]).to(device)
 
-for i,seq in tqdm(enumerate(mut_seqs), total = len(mut)):
+for i,seq in tqdm(enumerate(ref_seqs), total = len(ref)):
     if seq == '': continue
     with torch.no_grad():
         inputs = tokenizer(seq)
@@ -53,6 +53,6 @@ for i,seq in tqdm(enumerate(mut_seqs), total = len(mut)):
         att = load_val(inputs['attention_mask'])
         output = model(ids, attention_mask=att)
         embedding = output['last_hidden_state'][0][0].detach().to('cpu').numpy()
-        mut_embeddings[i] = embedding
+        ref_embeddings[i] = embedding
 
-np.save('/data/dandreas/SomaticMutationsLLM/aa/canonical_mut_embeddings_esm2.npy',mut_embeddings)
+np.save('/data/dandreas/SomaticMutationsLLM/aa/canonical_ref_embeddings_esm2.npy',ref_embeddings)
