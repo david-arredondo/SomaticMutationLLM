@@ -144,9 +144,37 @@ class Dataset_Fusion_MutationList_Binary(Dataset):
 
         return emb.to(self.device), binary.to(self.device), label.to(self.device)
 
+class Dataset_Assay(Dataset):
+    def __init__(self, data_df_emb, mut_embeddings, ref_embeddings, tumors, assays, device):
+        load_str = lambda x: list(map(int,x.split(',')))
+        flatten = lambda x: [i for j in x for i in j]
+
+        self.data = [load_str(i) for i in data_df_emb['idxs'].values]
+        self.labels = torch.tensor(data_df_emb['int_label'].values,dtype=torch.long)
+        self.assay_labels = data_df_emb['assay'].values
+        self.assays = assays
+        self.mut_embeddings = mut_embeddings
+        self.ref_embeddings = ref_embeddings
+        self.ref_map = {i[5]:i[4] for j in tumors.values() for i in j for k in i}
+        self.device = device
+    
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self,idx):
+        idxs = self.data[idx]
+        assay_id = self.assay_labels[idx]
+        assay_idxs = self.assays[assay_id]
+        gene_order = {i:j for j,i in enumerate(assay_idxs)}
+        order = [gene_order[self.ref_map[i]] for i in idxs] 
+        emb = torch.stack([torch.tensor(self.ref_embeddings[i],dtype=torch.float32) for i in assay_idxs])
+        emb_ = torch.stack([torch.tensor(self.mut_embeddings[i],dtype=torch.float32) for i in idxs])
+        emb[order] = emb_
+        return emb.to(self.device), torch.tensor(assay_idxs,dtype=torch.long).to(self.device), self.labels[idx].to(self.device)
+
 def custom_collate(batch):
     data = [item[0] for item in batch]
     labels = [item[1] for item in batch]
-    data = pad_sequence(data, batch_first=True, padding_value=float('-inf'))
+    data = pad_sequence(data, batch_first=True, padding_value=0)
     labels = torch.stack(labels)
     return data, labels
