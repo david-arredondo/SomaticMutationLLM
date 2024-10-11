@@ -178,3 +178,13 @@ def custom_collate(batch):
     data = pad_sequence(data, batch_first=True, padding_value=0)
     labels = torch.stack(labels)
     return data, labels
+
+def custom_collate_assay(batch):
+    data = [item[0] for item in batch]
+    assay = [item[1] for item in batch]
+    labels = [item[2] for item in batch]
+
+    data = pad_sequence(data, batch_first=True, padding_value=0)
+    assay = pad_sequence(assay, batch_first=True, padding_value=assay[0][0])
+    labels = torch.stack(labels)
+    return data, assay, labels
