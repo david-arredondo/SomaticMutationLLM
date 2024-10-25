@@ -2,6 +2,7 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 from sklearn.decomposition import PCA
+import pandas as pd
 
 class Dataset_MutationList(Dataset):
     def __init__(self, data_df, embeddings, device):
@@ -20,10 +21,11 @@ class Dataset_MutationList(Dataset):
         return emb.to(self.device), self.labels[idx].to(self.device)
     
 class Dataset_Binary(Dataset):
-    def __init__(self,data_df,device):
+    def __init__(self,data_df,label_col,device):
         load_str = lambda x: list(map(int,x.split(',')))
-        self.labels = torch.tensor(data_df['int_label'].values,dtype=torch.long)
-        self.data_ = [load_str(i) for i in data_df['idxs'].values]
+        self.labels = torch.tensor(data_df[label_col].values,dtype=torch.long)
+        self.data_ = [load_str(i) for i in data_df['idxs_binary'].values]
+        print(f'{len(self.data_)} samples')
         self.device = device
     
     def __len__(self):
@@ -145,13 +147,56 @@ class Dataset_Fusion_MutationList_Binary(Dataset):
         return emb.to(self.device), binary.to(self.device), label.to(self.device)
 
 class Dataset_Assay(Dataset):
-    def __init__(self, data_df_emb, mut_embeddings, ref_embeddings, tumors, assays, device):
+    def __init__(self, data_df, label_col, mut_embeddings, ref_embeddings, tumors, assays, device):
         load_str = lambda x: list(map(int,x.split(',')))
         flatten = lambda x: [i for j in x for i in j]
-
-        self.data = [load_str(i) for i in data_df_emb['idxs'].values]
-        self.labels = torch.tensor(data_df_emb['int_label'].values,dtype=torch.long)
-        self.assay_labels = data_df_emb['assay'].values
+        self.data = [load_str(i) for i in data_df['idxs'].values]
+        self.labels = torch.tensor(data_df[label_col].values,dtype=torch.long)
+        self.assay_labels = data_df['assay'].values
+        self.assays = assays
+        self.mut_embeddings = mut_embeddings
+        self.ref_embeddings = ref_embeddings
+        self.ref_map = {i[5]:i[4] for j in tumors.values() for i in j for k in i}
+        self.device = device
+        print(f'{len(self.data)} samples')
+        print(f'{data_df["patient_id"].nunique()} unique patients')
+        print(f'{data_df[label_col].nunique()} labels')
+    
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self,idx):
+        idxs = self.data[idx]
+        assay_id = self.assay_labels[idx]
+        assay_idxs = self.assays[assay_id]
+        gene_order = {i:j for j,i in enumerate(assay_idxs)}
+        order = [gene_order[self.ref_map[i]] for i in idxs] 
+        emb = torch.stack([torch.tensor(self.ref_embeddings[i],dtype=torch.float32) for i in assay_idxs])
+        emb_ = torch.stack([torch.tensor(self.mut_embeddings[i],dtype=torch.float32) for i in idxs])
+        emb[order] = emb_
+        return emb.to(self.device), torch.tensor(assay_idxs,dtype=torch.long).to(self.device), self.labels[idx].to(self.device)
+    
+class Dataset_Assay_Survival(Dataset):
+    def __init__(self, data_df, mut_embeddings, ref_embeddings, tumors, assays, device, uncensored_only = False, ratio = None, random_state = 42):
+        load_str = lambda x: list(map(int,x.split(',')))
+        flatten = lambda x: [i for j in x for i in j]
+        print(f'dropped {data_df["time"].isna().sum()} nan samples ({data_df["time"].isna().sum()/len(data_df)*100:.2f}%)')
+        data_df = data_df.dropna()
+        data_df = data_df[data_df['time']>0]
+        if uncensored_only: data_df = data_df[data_df['censor']==1]
+        if ratio is not None:
+            censored = data_df[data_df['censor']==0]
+            uncensored = data_df[data_df['censor']==1]
+            censored_sample = censored.sample(n=int(ratio*len(uncensored)),random_state = random_state)
+            data_df = pd.concat([uncensored,censored_sample])
+        print(len(data_df),'samples')
+        print(data_df['patient_id'].nunique(),'unique patients')
+        print(data_df['CANCER_TYPE'].nunique(),'cancer types')
+        print(data_df['CANCER_TYPE_DETAILED'].nunique(),'detailed cancer types')
+        self.data = [load_str(i) for i in data_df['idxs'].values]
+        self.times = torch.tensor(data_df['time'].values,dtype=torch.long)
+        self.events = torch.tensor(data_df['censor'].values,dtype=torch.long)
+        self.assay_labels = data_df['assay'].values
         self.assays = assays
         self.mut_embeddings = mut_embeddings
         self.ref_embeddings = ref_embeddings
@@ -170,7 +215,38 @@ class Dataset_Assay(Dataset):
         emb = torch.stack([torch.tensor(self.ref_embeddings[i],dtype=torch.float32) for i in assay_idxs])
         emb_ = torch.stack([torch.tensor(self.mut_embeddings[i],dtype=torch.float32) for i in idxs])
         emb[order] = emb_
-        return emb.to(self.device), torch.tensor(assay_idxs,dtype=torch.long).to(self.device), self.labels[idx].to(self.device)
+        return emb.to(self.device), torch.tensor(assay_idxs,dtype=torch.long).to(self.device), self.times[idx].to(self.device), self.events[idx].to(self.device)
+    
+class Dataset_Binary_Survival(Dataset):
+    def __init__(self,data_df,device, uncensored_only = False, ratio = None, random_state = 42):
+        load_str = lambda x: list(map(int,x.split(',')))
+        n_dropped = data_df["time"].isna().sum()
+        print(f'dropped {n_dropped} nan samples ({n_dropped/len(data_df)*100:.2f}%)')
+        data_df = data_df.dropna()
+        data_df = data_df[data_df['time']>0]
+        if uncensored_only: data_df = data_df[data_df['censor']==1]
+        if ratio is not None:
+            censored = data_df[data_df['censor']==0]
+            uncensored = data_df[data_df['censor']==1]
+            censored_sample = censored.sample(n=int(ratio*len(uncensored)),random_state = random_state)
+            data_df = pd.concat([uncensored,censored_sample])
+        print(len(data_df),'samples')
+        print(data_df['patient_id'].nunique(),'unique patients')
+        print(data_df['CANCER_TYPE'].nunique(),'cancer types')
+        print(data_df['CANCER_TYPE_DETAILED'].nunique(),'detailed cancer types')
+        self.times = torch.tensor(data_df['time'].values,dtype=torch.long)
+        self.events = torch.tensor(data_df['censor'].values,dtype=torch.long)
+        self.data_ = [load_str(i) for i in data_df['idxs_binary'].values]
+        self.device = device
+    
+    def __len__(self):
+        return len(self.data_)
+    
+    def __getitem__(self,idx):
+        idxs = self.data_[idx]
+        binary = torch.zeros(1448)
+        binary[idxs] = 1
+        return binary.to(self.device), self.times[idx].to(self.device), self.events[idx].to(self.device)
 
 def custom_collate(batch):
     data = [item[0] for item in batch]
@@ -188,3 +264,15 @@ def custom_collate_assay(batch):
     assay = pad_sequence(assay, batch_first=True, padding_value=assay[0][0])
     labels = torch.stack(labels)
     return data, assay, labels
+
+def custom_collate_assay_survival(batch):
+    data = [item[0] for item in batch]
+    assay = [item[1] for item in batch]
+    times = [item[2] for item in batch]
+    events = [item[3] for item in batch]
+
+    data = pad_sequence(data, batch_first=True, padding_value=0)
+    assay = pad_sequence(assay, batch_first=True, padding_value=assay[0][0])
+    times = torch.stack(times)
+    events = torch.stack(events)
+    return data, assay, times, events
