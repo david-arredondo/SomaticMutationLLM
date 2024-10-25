@@ -153,3 +153,8 @@ model/km/uec_km60.csv
 model/km/Uterine_Endometrioid_Carcinoma_km60.csv
 output.png
 model/snn_labs.pkl
+model/km/Chronic_Lymphocytic_LeukemiaSmall_Lymphocytic_Lymphoma_km60.csv
+model/km/Head_and_Neck_Squamous_Cell_Carcinoma_km60.csv
+model/km/SoMatt_Survival_Data_Balanced_Full.csv
+model/tsne_output_a100.pkl
+model/figures/small_vs_large_assays.pdf

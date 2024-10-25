@@ -177,18 +177,11 @@ class Dataset_Assay(Dataset):
         return emb.to(self.device), torch.tensor(assay_idxs,dtype=torch.long).to(self.device), self.labels[idx].to(self.device)
     
 class Dataset_Assay_Survival(Dataset):
-    def __init__(self, data_df, mut_embeddings, ref_embeddings, tumors, assays, device, uncensored_only = False, ratio = None, random_state = 42):
+    def __init__(self, data_df, mut_embeddings, ref_embeddings, tumors, assays, device):
         load_str = lambda x: list(map(int,x.split(',')))
         flatten = lambda x: [i for j in x for i in j]
-        print(f'dropped {data_df["time"].isna().sum()} nan samples ({data_df["time"].isna().sum()/len(data_df)*100:.2f}%)')
-        data_df = data_df.dropna()
-        data_df = data_df[data_df['time']>0]
-        if uncensored_only: data_df = data_df[data_df['censor']==1]
-        if ratio is not None:
-            censored = data_df[data_df['censor']==0]
-            uncensored = data_df[data_df['censor']==1]
-            censored_sample = censored.sample(n=int(ratio*len(uncensored)),random_state = random_state)
-            data_df = pd.concat([uncensored,censored_sample])
+        assert data_df['time'].isna().sum() == 0, 'time column contains nan values'
+        assert data_df['time'].min() > 0, 'time column contains non-positive values'       
         print(len(data_df),'samples')
         print(data_df['patient_id'].nunique(),'unique patients')
         print(data_df['CANCER_TYPE'].nunique(),'cancer types')
@@ -218,18 +211,10 @@ class Dataset_Assay_Survival(Dataset):
         return emb.to(self.device), torch.tensor(assay_idxs,dtype=torch.long).to(self.device), self.times[idx].to(self.device), self.events[idx].to(self.device)
     
 class Dataset_Binary_Survival(Dataset):
-    def __init__(self,data_df,device, uncensored_only = False, ratio = None, random_state = 42):
+    def __init__(self,data_df,device):
+        assert data_df['time'].isna().sum() == 0, 'time column contains nan values'
+        assert data_df['time'].min() > 0, 'time column contains non-positive values'
         load_str = lambda x: list(map(int,x.split(',')))
-        n_dropped = data_df["time"].isna().sum()
-        print(f'dropped {n_dropped} nan samples ({n_dropped/len(data_df)*100:.2f}%)')
-        data_df = data_df.dropna()
-        data_df = data_df[data_df['time']>0]
-        if uncensored_only: data_df = data_df[data_df['censor']==1]
-        if ratio is not None:
-            censored = data_df[data_df['censor']==0]
-            uncensored = data_df[data_df['censor']==1]
-            censored_sample = censored.sample(n=int(ratio*len(uncensored)),random_state = random_state)
-            data_df = pd.concat([uncensored,censored_sample])
         print(len(data_df),'samples')
         print(data_df['patient_id'].nunique(),'unique patients')
         print(data_df['CANCER_TYPE'].nunique(),'cancer types')
