@@ -35,24 +35,33 @@ tumors = pickleLoad('../../aa/tumors.pkl')
         #5:canonical_mut [39] is None
         #6:data
 mut2ref = pickleLoad('../../aa/idxMap_canonical_mut_to_ref.pkl')
+mut2type = pickleLoad('../../aa/mut2type.pkl')
 
-def diff_indices(shorter, longer):
-    # Ensure we treat the longer string as 'mutated' for uniform handling of insertions/deletions
-    if shorter==longer: return None
-
-    # Find the starting index where the two strings differ
-    start = next((i for i, (o, m) in enumerate(zip(shorter, longer)) if o != m), len(shorter))
-
-    # Calculate the length difference 
-    len_diff = len(longer) - len(shorter)
-
-    if len_diff == 0:
-        # Find the end index of the replacement by comparing substrings starting from 'start'
-        end = start + next((i for i, (o, m) in enumerate(zip(shorter[start:], longer[start:])) if o == m), len(shorter) - start)
-        return start, end
-
-    # Return the range of indices as 'insertion' or 'deletion'
-    return start, start + len_diff
+def find_replacement_substring(a: str, b: str):
+    len_a = len(a)
+    len_b = len(b)
+    start = 0
+    while start < min(len_a, len_b) and a[start] == b[start]:
+        start += 1
+    result = None, '', '', (start,start)
+    if start == len_a and start == len_b: return result
+    end_a = len_a - 1
+    end_b = len_b - 1
+    while end_a >= start and end_b >= start and a[end_a] == b[end_b]:
+        end_a -= 1
+        end_b -= 1
+    substring_in_a = a[start:end_a+1]
+    substring_in_b = b[start:end_b+1]
+    if substring_in_b:
+        # Replacement occurred
+        repl = True
+        indices = (start, end_b+1)
+    else:
+        # Deletion occurred
+        repl = False
+        indices = (start, end_a+1)
+    result = repl, substring_in_a, substring_in_b, indices
+    return result
 
 device = 'cuda:1'
 checkpoint = 'facebook/esm2_t30_150M_UR50D'
@@ -64,18 +73,17 @@ model.eval()
 mut_seqs = []
 ref_seqs = []
 
-for seq in muts: 
-    if seq is None: 
+for seq,typ in zip(muts,mut2type): 
+    if seq is None or typ == 'Nonstop_Mutation': 
         mut_seqs.append('')
         continue
     seq = seq.split('*')[0]
     mut_seqs.append(seq)
 
 for seq in refs: 
-    if seq is None: 
+    if seq is None or '*' in seq: 
         ref_seqs.append('')
         continue
-    seq = seq.split('*')[0]
     ref_seqs.append(seq)
 
 mut_embeddings = np.empty((len(muts),640),dtype=np.float32)
@@ -85,16 +93,25 @@ load_val = lambda x: torch.tensor([x]).to(device)
 all_seqs = []
 for i,mut in tqdm(enumerate(mut_seqs), total = len(mut_seqs)):
     ref = ref_seqs[mut2ref[i]]
+    typ = mut2type[i]
     if mut == '' or ref == '': 
         all_seqs.append(('',0,0,False))
         continue
     if mut == ref: 
         all_seqs.append(('',0,0,False))
         continue
-    deletion = len(ref) > len(mut)
-    seq = ref if deletion else mut
-    (shorter,longer) = (mut,ref) if deletion else (ref,mut)
-    start,end = diff_indices(shorter,longer)
+    repl, orig, new, (start, end) = find_replacement_substring(ref,mut)
+    if typ == 'sub':
+        if new == '':
+            seq = ref
+            deletion = True
+        else:
+            seq = mut
+            deletion = False
+    elif typ == 'non':
+        seq = ref
+        deletion = True
+        end = len(ref)
     all_seqs.append((seq,start,end,deletion))
 all_seqs
 
@@ -114,7 +131,7 @@ for i,(seq,start,end,deletion) in tqdm(enumerate(all_seqs), total = len(all_seqs
                 if deletion: embedding = -embedding
                 mut_embeddings[i] = embedding
             if i%1000==0:
-                np.save('/data/dandreas/SomaticMutationsLLM/aa/canonical_mut_average_embeddings_esm2.npy',mut_embeddings)
+                np.save('/data/dandreas/SomaticMutationsLLM/aa/canonical_mut_average_embeddings_esm.npy',mut_embeddings)
         except:
             count+=1
             print(i,count)

@@ -316,6 +316,7 @@ class MLPClassifier(nn.Module):
         x = self.relu(x)
         x = self.linear2(x)
         logits = self.classifier(x)
+        x = self.relu(x)
         if return_embedding:
             return logits, x
         return logits
