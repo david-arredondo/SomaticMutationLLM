@@ -126,6 +126,7 @@ for i,(seq,start,end,deletion) in tqdm(enumerate(all_seqs), total = len(all_seqs
                 ids = load_val(inputs['input_ids'])
                 att = load_val(inputs['attention_mask'])
                 output = model(ids, attention_mask=att)
+                start,end = start+1,end+1 #shifted by 1 because of [CLS] token
                 embedding = output['last_hidden_state'][0][start:end].detach().to('cpu').numpy()
                 if mut_len>1: embedding = np.mean(embedding, axis = 0, keepdims = True)
                 if deletion: embedding = -embedding
