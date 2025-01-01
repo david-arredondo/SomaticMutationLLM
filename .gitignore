@@ -200,3 +200,8 @@ dbsnp/00-common_all/00-common_all_34000000_36000000.csv
 dbsnp/00-common_all/00-common_all_36000000_37463647.csv
 dbsnp/CancerMutationCensus_AllData_Tsv_v101_GRCh37/CancerMutationCensus_AllData_v101_GRCh37.tsv
 dbsnp/CancerMutationCensus_AllData_Tsv_v101_GRCh37/README_CancerMutationCensus_AllData_v101_GRCh37.txt
+pancan/TCGA-CDR-SupplementalTableS1.xlsx
+wxs/clinical.cohort.2024-12-13.tar
+pancan/mc3.v0.2.8.PUBLIC.maf
+pancan/clinical_PANCAN_patient_with_followup.tsv
+muat/muat_results_1_00percentMinCancerType.csv
