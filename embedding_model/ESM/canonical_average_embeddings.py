@@ -86,7 +86,7 @@ for seq in refs:
         continue
     ref_seqs.append(seq)
 
-mut_embeddings = np.empty((len(muts),640),dtype=np.float32)
+mut_embeddings = np.zeros((len(muts),640),dtype=np.float32)
 print('getting embeddings')
 load_val = lambda x: torch.tensor([x]).to(device)
 

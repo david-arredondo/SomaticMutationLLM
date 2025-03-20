@@ -41,7 +41,7 @@ for seq in ref:
     seq = seq.split('*')[0]
     ref_seqs.append(seq)
 
-ref_embeddings = np.empty((len(ref),640),dtype=np.float32)
+ref_embeddings = np.zeros((len(ref),640),dtype=np.float32)
 print('getting embeddings')
 load_val = lambda x: torch.tensor([x]).to(device)
 
