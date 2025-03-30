@@ -3,10 +3,11 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 from sklearn.decomposition import PCA
 import pandas as pd
+import ast
 
 class Dataset_MutationList(Dataset):
     def __init__(self, data_df, embeddings, device):
-        load_str = lambda x: list(map(int,x.split(',')))
+        load_str = lambda x: ast.literal_eval(x)
         self.labels = torch.tensor(data_df['int_label'].values,dtype=torch.long)
         self.data_ = [load_str(i) for i in data_df['idxs'].values]
         self.embeddings = embeddings
@@ -22,7 +23,7 @@ class Dataset_MutationList(Dataset):
     
 class Dataset_Binary(Dataset):
     def __init__(self,data_df,label_col,device):
-        load_str = lambda x: list(map(int,x.split(',')))
+        load_str = lambda x: ast.literal_eval(x)
         self.labels = torch.tensor(data_df[label_col].values,dtype=torch.long)
         self.data_ = [load_str(i) for i in data_df['idxs_binary'].values]
         print(f'{len(self.data_)} samples')
@@ -39,7 +40,7 @@ class Dataset_Binary(Dataset):
     
 class Dataset_TopN_bin(Dataset):
     def __init__(self,data_df,device, n=10):
-        load_str = lambda x: list(map(int,x.split(',')))
+        load_str = lambda x: ast.literal_eval(x)
         self.data_ = [load_str(i) for i in data_df['idxs'].values]
         unique_idxs = set(self.data.flatten())
         self.data_order = {i:ni for ni,i in enumerate(unique_idxs)}
@@ -59,7 +60,7 @@ class Dataset_TopN_bin(Dataset):
     
 class Dataset_TopN_emb(Dataset):
     def __init__(self, data_df_emb, mut_embeddings, ref_embeddings, tumors, device, n = 10, flat = True, pca=False):
-        load_str = lambda x: list(map(int,x.split(',')))
+        load_str = lambda x: ast.literal_eval(x)
         flatten = lambda x: [i for j in x for i in j]
 
         self.data = [load_str(i) for i in data_df_emb['idxs'].values]
@@ -104,7 +105,7 @@ class Dataset_TopN_emb(Dataset):
 
 class Dataset_Fusion_MutationList_Binary(Dataset):
     def __init__(self, data_bin, data_emb, data_bin_label_map, data_emb_label_map, embeddings, device):
-        load_str = lambda x: list(map(int,x.split(',')))
+        load_str = lambda x: ast.literal_eval(x)
         self.data_emb_ = [load_str(i) for i in data_emb['idxs'].values]
         self.data_bin_ = [load_str(i) for i in data_bin['idxs'].values]
         self.barcode_emb = data_emb['barcode'].values
@@ -148,7 +149,7 @@ class Dataset_Fusion_MutationList_Binary(Dataset):
 
 class Dataset_Assay(Dataset):
     def __init__(self, data_df, label_col, mut_embeddings, ref_embeddings, tumors, assays, device, pos=True):
-        load_str = lambda x: list(map(int, x.split(',')))
+        load_str = lambda x: ast.literal_eval(x)
         flatten = lambda x: [i for j in x for i in j]
         self.data = [load_str(i) for i in data_df['idxs'].values]
         self.labels = torch.tensor(data_df[label_col].values, dtype=torch.long)
@@ -188,7 +189,7 @@ class Dataset_Assay(Dataset):
 
 class Dataset_Classification_MutationsOnly(Dataset):
     def __init__(self, data_df, label_col, mut_embeddings, tumors, device, pos=True):
-        load_str = lambda x: list(map(int, x.split(',')))
+        load_str = lambda x: ast.literal_eval(x)
         self.data = [load_str(i) for i in data_df['idxs'].values]
         self.labels = torch.tensor(data_df[label_col].values, dtype=torch.long)
         self.mut_embeddings = mut_embeddings
@@ -213,7 +214,7 @@ class Dataset_Classification_MutationsOnly(Dataset):
 
 class Dataset_Survival_MutationsOnly(Dataset):
     def __init__(self, data_df, mut_embeddings, tumors, device):
-        load_str = lambda x: list(map(int, x.split(',')))
+        load_str = lambda x: ast.literal_eval(x)
         assert data_df['time'].isna().sum() == 0, 'time column contains nan values'
         assert data_df['time'].min() > 0, 'time column contains non-positive values'       
         print(len(data_df),'samples')
@@ -299,7 +300,7 @@ class Dataset_DNN_Classifier(Dataset):
 class Dataset_Assay_Classification_Fusion(Dataset):
     def __init__(self, data_dfs, mut_embeddings, ref_embeddings, tumors, assays, device, label_col = 'CANCER_TYPE_INT'):
         data_df_dnn, data_df = data_dfs 
-        load_str = lambda x: list(map(int,x.split(',')))
+        load_str = lambda x: ast.literal_eval(x)
         flatten = lambda x: [i for j in x for i in j]
         self.data = [load_str(i) for i in data_df['idxs'].values]
         self.labels = torch.tensor(data_df[label_col].values,dtype=torch.long)
@@ -350,7 +351,7 @@ class Dataset_DNN_Survival(Dataset):
 class Dataset_Assay_Survival_Fusion(Dataset):
     def __init__(self, data_dfs, mut_embeddings, ref_embeddings, tumors, assays, device):
         data_df_dnn, data_df = data_dfs
-        load_str = lambda x: list(map(int,x.split(',')))
+        load_str = lambda x: ast.literal_eval(x)
         flatten = lambda x: [i for j in x for i in j]
         assert data_df['time'].isna().sum() == 0, 'time column contains nan values'
         assert data_df['time'].min() > 0, 'time column contains non-positive values'       
@@ -388,7 +389,7 @@ class Dataset_Assay_Survival_Fusion(Dataset):
 
 class Dataset_Assay_Survival(Dataset):
     def __init__(self, data_df, mut_embeddings, ref_embeddings, tumors, assays, device):
-        load_str = lambda x: list(map(int, x.split(',')))
+        load_str = lambda x: ast.literal_eval(x)
         assert data_df['time'].isna().sum() == 0, 'time column contains nan values'
         assert data_df['time'].min() > 0, 'time column contains non-positive values'       
         print(len(data_df),'samples')
@@ -425,7 +426,7 @@ class Dataset_Binary_Survival(Dataset):
     def __init__(self,data_df,device):
         assert data_df['time'].isna().sum() == 0, 'time column contains nan values'
         assert data_df['time'].min() > 0, 'time column contains non-positive values'
-        load_str = lambda x: list(map(int,x.split(',')))
+        load_str = lambda x: ast.literal_eval(x)
         print(len(data_df),'samples')
         print(data_df['patient_id'].nunique(),'unique patients')
         print(data_df['CANCER_TYPE'].nunique(),'cancer types')

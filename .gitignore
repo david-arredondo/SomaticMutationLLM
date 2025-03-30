@@ -231,3 +231,5 @@ reference_genome
 labeled_data
 labeled_data
 reference_genome
+data_processing/seg_data.csv
+data_processing/cna_somatt_data_df.csv

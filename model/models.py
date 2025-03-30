@@ -520,7 +520,6 @@ def negative_log_partial_likelihood(survival, risk, debug=False):
     """
 
     # calculate negative log likelihood from estimated risk\
-
     # print(torch.stack([survival[:, 0], risk]))
     _, idx = torch.sort(survival[:, 0], descending=True)
     censor = survival[idx, 1]

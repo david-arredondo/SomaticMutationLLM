@@ -37,7 +37,7 @@ class mutatedSequenceGenerator:
         self.seqs = seqs
     
     def printInfo(self,idx):
-        start,end,chrom,build,variant_class,isoforms,hgncId,gene_start,gene_end,ref_allele,strand,mutation_value,barcode = self.data[idx]
+        start,end,chrom,build,variant_class,isoforms,hgncId,gene_start,gene_end,ref_allele,strand,mutation_value,barcode,ref_count,alt_count,assay,name = self.data[idx]
         print('variant class:',variant_class)
         print('mutation start:',start)
         print('mutation end:',end)
@@ -73,7 +73,7 @@ class mutatedSequenceGenerator:
         return mutated_exon
 
     def getRefAndMutatedSeq(self,idx,verbose=False):
-        start,end,chrom,build,variant_class,isoforms,hgncId,gene_start,gene_end,ref_allele,strand,mutation,barcode = self.data[idx]
+        start,end,chrom,build,variant_class,isoforms,hgncId,gene_start,gene_end,ref_allele,strand,mutation,barcode,ref_count,alt_count,assay,name = self.data[idx]
 
         # ref_gene = ref_genome[gene_start-1:gene_end]
         ref_gene = self.seqs[(build,chrom)][hgncId]

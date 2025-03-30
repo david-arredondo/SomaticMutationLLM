@@ -1,0 +1,14 @@
+loading data from ../aa/tumors.pkl
+loading data from ../data_processing/map_tumorBarcode_to_clinicalSampleIdx.pkl
+loading data from ../aa/assays.pkl
+164586 samples
+147659 unique patients
+loading data from ../labeled_data/label_mappings/label_mapping_SEX_somatt_data_df.pkl
+loading data from ../labeled_data/label_mappings/label_mapping_RACE_somatt_data_df.pkl
+loading data from ../labeled_data/label_mappings/label_mapping_ARM_somatt_data_df.pkl
+loading data from ../labeled_data/label_mappings/label_mapping_CANCER_TYPE_somatt_data_df.pkl
+loading data from ../labeled_data/label_mappings/label_mapping_CANCER_TYPE_DETAILED_somatt_data_df.pkl
+164586 samples
+147659 unique patients
+
+FOLD 1
